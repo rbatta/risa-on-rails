@@ -7,8 +7,6 @@ categories: postgres mysql
 permalink: /a-quick-tip/
 ---
 
-## A Quick Tip
-
 I'm constantly learning, mostly at this new job. It's gotten to the point where I end up diving down the rabbit hole many many times. Don't get me wrong, I love every bit of it. Might even say I'm addicted to it. Today's tip is brought to you by both MySQL && Postgres! Whoa, a double feature.
 
 ### The problem
