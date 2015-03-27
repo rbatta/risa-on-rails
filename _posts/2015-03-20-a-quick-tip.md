@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "A Quick Tip"
+title:  "A Quick Tip with Database Formatting"
 date:   2015-03-20
 tags: [postgres, mysql, tips]
 categories: postgres mysql
-permalink: /a-quick-tip/
+permalink: /a-quick-tip-with-database-formatting/
 ---
 
 I'm constantly learning, mostly at this new job. It's gotten to the point where I end up diving down the rabbit hole many many times. Don't get me wrong, I love every bit of it. Might even say I'm addicted to it. Today's tip is brought to you by both MySQL && Postgres! Whoa, a double feature.
@@ -31,3 +31,5 @@ Postgres is a bit better in this regard. There's a global setting called `\x aut
 Right on! This makes viewing records directly in the database so much easier. 
 
 Got a better way? Let me know via one of them contact method thingers.
+
+Level up +1

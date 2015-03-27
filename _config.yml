@@ -9,3 +9,20 @@ twitter_username: mookiy
 github_username:  rbatta
 # Build settings
 markdown: kramdown
+timezone: America/Los_Angeles
+future: false
+# boilerplate stuff
+post:
+  template: _post.md
+  extension: md
+page:
+  template: _page.txt
+  extension: md
+editor: subl
+git:
+  branch: master
+transfer:
+  command: rsync
+  settings: -av
+  source: _site/
+  destination: git@github.com:rbatta/risa-on-rails.git
