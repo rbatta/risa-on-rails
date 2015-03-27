@@ -1,7 +1,7 @@
 ---
 title: "Integrating Monit to Slack"
 layout: post
-date:   2015-03-30
+date:   2015-03-27
 tags: [slack, monit, devops]
 categories: devops monit slack
 permalink: /integrate-monit-with-slack/
