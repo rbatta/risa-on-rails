@@ -11,9 +11,9 @@ Looks like you've found this lil page. If you haven't noticed, I've been adding 
 As I'm learning Jekyll, I'll update this lil easter-egg page to show how many posts are in which category of level-upping-goodness. 
 
 #### Level up
-+1: # of posts
-+10: # of posts
-+25: # of posts
++1: # of posts  
++10: # of posts  
++25: # of posts  
 +50: Whoa, we have one of these?
 
 
