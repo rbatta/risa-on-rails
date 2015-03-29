@@ -6,9 +6,334 @@
 </description>
     <link>/risa-on-rails/</link>
     <atom:link href="/risa-on-rails/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 28 Mar 2015 23:44:18 -0700</pubDate>
-    <lastBuildDate>Sat, 28 Mar 2015 23:44:18 -0700</lastBuildDate>
+    <pubDate>Sun, 29 Mar 2015 00:00:35 -0700</pubDate>
+    <lastBuildDate>Sun, 29 Mar 2015 00:00:35 -0700</lastBuildDate>
     <generator>Jekyll v2.5.3</generator>
+    
+      <item>
+        <title>A Rails Double App Setup on Digital Ocean</title>
+        <description>&lt;p&gt;I recently started using Digital Ocean because of work. Dat doing the devops bidness. Right. If you’re unfamiliar with Digital Ocean, they are a virtual server provider that uses SSD hard drives and a really cheap pricing plan.  Since it’s bare bones, you’re responsible for everything, from security, to installation of whatever. That being said, they DO (haha) provide some templates to make things easier. One of them is their Rails 1-click template, which has Nginx, Unicorn, and MySQL already installed. Right on!&lt;/p&gt;
+
+&lt;p&gt;Hey, if LAMP stack is Linux Apache MySQL PHP and LEMP is the same but Nginx, then is this setup called LEMUR? Linux Nginx MySQL Unicorn Rails. And if it’s Postgres, then it’d be LEPUR? Well, I’m calling them this from here on out!&lt;/p&gt;
+
+&lt;p&gt;That being said, what happens when you actually want to put TWO apps on a DO rails-template box?  There’s a lot of weird sometimes-reverse engineering going on with that, but overall, it’s totally possible to do. There isn’t any documentation on this, so if you run into this scenario, hopefully this helps you.&lt;/p&gt;
+
+&lt;p&gt;The method I’m presenting here is the way I had set this up and got working.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;em&gt;FULL DISCLAIMER&lt;/em&gt;&lt;/strong&gt; It’s a bit ugly, because I’m still new to this, and at the time no one else had done this before. Since I started writing this post, I realized that our setup was just not sustainable and have moved to using straight-up Ubuntu 14.10 boxes. Also, Ubuntu 14.04 does not support Postgres 9.4. Ew. But that’s a topic for another day.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;TL;DR&lt;/strong&gt; I basically doubled all the unicorn conf files and doubled the server blocks in nginx.&lt;/p&gt;
+
+&lt;h2 id=&quot;digital-ocean-1-click-rails-template&quot;&gt;Digital Ocean 1-Click Rails Template&lt;/h2&gt;
+
+&lt;p&gt;Start with your standard Ubuntu setup and click the Rails template. Deploy. The DO template comes with a user already created called Rails. They have a great doc on &lt;a href=&quot;https://www.digitalocean.com/community/tutorials/how-to-use-the-1-click-ruby-on-rails-on-ubuntu-14-04-image&quot;&gt;how to set your own Rails app with their template&lt;/a&gt;, but here’s my modifications.  Since our apps are on the LEPUR stack, there’s a bit of extra work.&lt;/p&gt;
+
+&lt;h3 id=&quot;bash-setup&quot;&gt;&amp;gt; Bash setup&lt;/h3&gt;
+&lt;p&gt;First, start by installing git and Postgres. Skip the Postgres install if you’re sticking with LEMUR. I dropped the &lt;code&gt;sudo&lt;/code&gt; part since I’m logged in as &lt;code&gt;root&lt;/code&gt; user.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;apt-get update
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;apt-get install git
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;apt-get postgresql postgresql-contrib&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Set up git with your name and username. Switch to Postgres user account and create your psql user named &lt;code&gt;rails&lt;/code&gt; to keep it consistent with the already-created rails user. Gosh that’s confusing.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;git config --global user.name &lt;span class=&quot;s2&quot;&gt;&amp;quot;YOURNAME&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;git config --global user.email &lt;span class=&quot;s2&quot;&gt;&amp;quot;YOUREMAIL&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;su - postgres
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;createuser --interactive -P rails&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Follow the on screen commands for giving your rails postgres-user a password (keep it secret, keep it safe). Don’t give it superuser status. Safety first, after all. Exit out of the postgres user account. Set up the rails bash environment (autoload bash shell upon user switch) and create a directory for sockets in /var.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;chsh -s /bin/bash rails
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;mkdir /var/sockets&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;two-rails-apps-setup&quot;&gt;&amp;gt; Two Rails apps setup&lt;/h3&gt;
+&lt;p&gt;Now we add our 2 apps. For simplicity sake, I’m adding both of them into the /home/rails/ directory, once I empty it out. If you accidentally deleted the entire rails folder, just &lt;code&gt;mkdir rails&lt;/code&gt; in &lt;code&gt;/home&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;rm -r /home/rails/*
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /home/rails
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;git clone REPO1_ADDRESS
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; /home/rails/REPO1
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;rvm install RUBY1-VERSION-FOR-REPO1
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;rvm use RUBY1
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;gem install bundler
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bundle install --without development &lt;span class=&quot;nb&quot;&gt;test&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Repeat this for the 2nd app (skipping the 1st &lt;code&gt;rm -r&lt;/code&gt; step, of course). I assume you have two completely different Ruby versions, as was the case with me: 2.0 and 2.2. H’okayso. You may have noticed me running bundle as &lt;code&gt;root&lt;/code&gt;. Digital Ocean is a bit weird. They want you to use &lt;code&gt;root&lt;/code&gt; to bundle install. I know, I know. Whatever. We work with what we’ve got. Hopefully don’t run into any hitches. Instead of using the &lt;code&gt;--deployment&lt;/code&gt; option, I’m using &lt;code&gt;--without development test&lt;/code&gt; because I could. (I’ve had issues with the deployment option.)&lt;/p&gt;
+
+&lt;p&gt;Ok this part was the easy part. Like setting up 2 dev environments on your own local machine. :)  Once bundle has been run, chown it to the rails user. The command below should get both repos at once.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;chown rails:www-data -R /home/rails&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;unicorn&quot;&gt;&amp;gt; Unicorn&lt;/h3&gt;
+&lt;p&gt;I struggled and searched the internet far and wide for someone who took the DO 1-click template to create 2 apps. Their template has a non-standard unicorn and nginx configuration (in terms of files and locations). Again, we work with what we got. The easiest way I found was to duplicate the unicorn files, which are located in two different places: &lt;code&gt;/etc/default/unicorn&lt;/code&gt; and &lt;code&gt;/home/unicorn/unicorn.conf&lt;/code&gt;. We’ll start with the latter. Out of sheer simplicity, the dupes had 2 appended to the end of it. I also use nano as my editor, so don’t judge. :)&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Optional step: If you’re paranoid like me, you can git init &lt;code&gt;/home/unicorn/&lt;/code&gt; directory so you can keep track of changes.&lt;/em&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cp /home/unicorn/unicorn.conf /home/unicorn/unicorn2.conf
+
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nano /home/unicorn/unicorn.conf
+
+&lt;span class=&quot;c&quot;&gt;# Edit repo 1&amp;#39;s unicorn.conf to look like this:&lt;/span&gt;
+listen &lt;span class=&quot;s2&quot;&gt;&amp;quot;/var/sockets/unicorn.REPO1.sock&amp;quot;&lt;/span&gt;, :backlog &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&amp;gt; 256
+worker_processes 4
+user &lt;span class=&quot;s2&quot;&gt;&amp;quot;rails&amp;quot;&lt;/span&gt;
+working_directory &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/rails/REPO1&amp;quot;&lt;/span&gt;
+pid &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/pids/REPO1.pid&amp;quot;&lt;/span&gt;
+stderr_path &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/log/REPO1.log&amp;quot;&lt;/span&gt;
+stdout_path &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/log/REPO1.log&amp;quot;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Edit repo 2&amp;#39;s unicorn2.conf to look like this:&lt;/span&gt;
+listen &lt;span class=&quot;s2&quot;&gt;&amp;quot;/var/sockets/unicorn.REPO2.sock&amp;quot;&lt;/span&gt;, :backlog &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&amp;gt; 256
+worker_processes 4
+user &lt;span class=&quot;s2&quot;&gt;&amp;quot;rails&amp;quot;&lt;/span&gt;
+working_directory &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/rails/REPO2&amp;quot;&lt;/span&gt;
+pid &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/pids/REPO2.pid&amp;quot;&lt;/span&gt;
+stderr_path &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/log/REPO2.log&amp;quot;&lt;/span&gt;
+stdout_path &lt;span class=&quot;s2&quot;&gt;&amp;quot;/home/unicorn/log/REPO2.log&amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;I changed the listen statements to point to sockets as that is &lt;a href=&quot;http://www.gotealeaf.com/blog/setting-up-your-production-server-with-nginx-and-unicorn&quot;&gt;faster than going thru ports&lt;/a&gt; apparently. Default backlog is 1024, so you can leave or keep it.&lt;/p&gt;
+
+&lt;p&gt;Onto the other unicorn config file. This file is the place that commands when the unicorn daemons start and such. Again, start with a copy/rename of the original for the 2nd repo. &lt;code&gt;Git init&lt;/code&gt; if you’re worried about messing things up royally. It really helps.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cp /etc/default/unicorn /etc/default/unicorn2
+
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nano /etc/default/unicorn
+
+&lt;span class=&quot;c&quot;&gt;# Edit these particular sections for Repo 1:&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# Path to your web application, sh&amp;#39;ld be also set in server&amp;#39;s config.rb,&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# option &amp;quot;working_directory&amp;quot;. Rack&amp;#39;s config.ru is located here.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;APP_ROOT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/rails/REPO1
+
+&lt;span class=&quot;c&quot;&gt;# Server&amp;#39;s config.rb, it&amp;#39;s not a rack&amp;#39;s config.ru&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;CONFIG_RB&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/unicorn/REPO1.conf
+
+&lt;span class=&quot;c&quot;&gt;# Where to store PID, sh&amp;#39;ld be also set in server&amp;#39;s config.rb, option &amp;quot;pid&amp;quot;.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;PID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/unicorn/pids/REPO1.pid
+&lt;span class=&quot;nv&quot;&gt;UNICORN_OPTS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;-D --config-file $CONFIG_RB -E production&amp;quot;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# change the RUBY_VERSION_REPO1 based on where&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# your rubies are located.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;PATH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/rvm/rubies/RUBY_VERSION_REPO1/bin/:/home/unicorn/.rvm/bin:/usr/local/sbin:/usr/bin:/bin:/sbin:&lt;span class=&quot;err&quot;&gt;$&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;GEM_HOME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/rvm/gems/RUBY_VERSION_REPO1
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;GEM_PATH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/rvm/gems/RUBY_VERSION_REPO1:/usr/local/rvm/gems/RUBY_VERSION_REPO1
+&lt;span class=&quot;nv&quot;&gt;DAEMON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/rvm/gems/RUBY_VERSION_REPO1/bin/unicorn
+
+&lt;span class=&quot;c&quot;&gt;# Env vars needed for the system to run REPO1 because unicorn is silly&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# and doesn&amp;#39;t understand when Unix has your env vars.&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;SECRET_TOKEN&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;stick_your_secret_token_or_secret_key_base_token_hash
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;WHATEVER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;env-vars-you-need&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you’re not sure which ruby version you’re using, make sure you do &lt;code&gt;which ruby&lt;/code&gt; from &lt;em&gt;within&lt;/em&gt; the repo.&lt;/p&gt;
+
+&lt;p&gt;Repeat these for the &lt;code&gt;unicorn2&lt;/code&gt; file, changing the values for the 2nd repo.&lt;/p&gt;
+
+&lt;p&gt;One very. important. step. left with your unicorn setup. You’ve got to make a double of your unicorn initializer. That’s located in &lt;code&gt;/etc/init.d/&lt;/code&gt; as &lt;code&gt;unicorn&lt;/code&gt;.  Copy it and then edit the parts that references Unicorn.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;cp /etc/init.d/unicorn /etc/init.d/unicorn2
+
+&lt;span class=&quot;c&quot;&gt;# here are the parts I changed in unicorn2&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;NAME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;unicorn2
+&lt;span class=&quot;nv&quot;&gt;DESC&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;Unicorn2 web server&amp;quot;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; -f /etc/default/unicorn2 &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+  . /etc/default/unicorn2
+&lt;span class=&quot;k&quot;&gt;fi&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;PID&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;PID&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;-/run/unicorn2.pid&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;
+
+check_config&lt;span class=&quot;o&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$CONFIGURED&lt;/span&gt; !&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;yes&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+    exit_with_message &lt;span class=&quot;s2&quot;&gt;&amp;quot;Unicorn2 is not configured (see /etc/default/unicorn2).&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;fi&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This allows us to run commands like &lt;code&gt;service unicorn2 start|stop|restart&lt;/code&gt; much like how the regular unicorn is done.&lt;/p&gt;
+
+&lt;p&gt;Time to restart all the unicorn services.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;service unicorn restart
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;service unicorn2 restart&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You can confirm that both are running by checking &lt;code&gt;top -c&lt;/code&gt; then press &lt;code&gt;shift-M&lt;/code&gt;. Since we named the 2nd unicorn2, your top should have unicorn and unicorn2 running. Score!&lt;/p&gt;
+
+&lt;h3 id=&quot;nginx&quot;&gt;&amp;gt; Nginx&lt;/h3&gt;
+&lt;p&gt;Now for the final bit. Nginx’s configuration.&lt;/p&gt;
+
+&lt;p&gt;If you opt to &lt;code&gt;git init&lt;/code&gt; your nginx configuration, do it in &lt;code&gt;/etc/nginx/&lt;/code&gt; directory rather than &lt;code&gt;/etc/nginx/sites_enabled/&lt;/code&gt; because any extra files in this directory will be read in by nginx.&lt;/p&gt;
+
+&lt;p&gt;I kept both apps’ information in the default file as different server blocks, but you can keep them in separate files if you’d like. Whatever floats your boat.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;c&quot;&gt;# anything that isn&amp;#39;t https&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# becomes https, permanently&lt;/span&gt;
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  listen 80&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    server_name DOMAIN1.com&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  rewrite ^ https://&lt;span class=&quot;nv&quot;&gt;$server_name$request_uri&lt;/span&gt;? permanent&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# anything that&amp;#39;s not https gets redirected to&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# domain2.com&lt;/span&gt;
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  listen 80&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  server_name DOMAIN2.com&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;301&lt;/span&gt; https://DOMAIN2.com&lt;span class=&quot;nv&quot;&gt;$request_uri&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# upstream for unicorn on repo 1. make sure&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# sockets location is same as in /home/unicorn/unicorn.conf&lt;/span&gt;
+upstream unicorn-REPO1 &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  server unix:/var/sockets/unicorn.REPO1.sock&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# SSL info for repo 1.&lt;/span&gt;
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  listen 443&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  server_name REPO1.com&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  ssl on&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  ssl_certificate /etc/ssl/REPO1.com.crt&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  ssl_certificate_key /etc/ssl/REPO1.com.key&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# location of repo 1&amp;#39;s public dir&lt;/span&gt;
+  root /home/rails/REPO1/public&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  client_max_body_size 1024M&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  location / &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    try_files &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt;/index.html &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt;.html &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; @app&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  location ~* ^.+&lt;span class=&quot;se&quot;&gt;\.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;jpg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;jpeg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;gif&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;png&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ico&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;zip&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;tgz&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;gz&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;rar&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;bz2&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;doc&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;xls&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;exe&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;pdf&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ppt&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;txt&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;tar&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mid&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;midi&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;wav&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;bmp&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;rtf&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mp3&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;flv&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mpeg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;avi&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    try_files &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; @app&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# change proxy_pass to the upstream name from above&lt;/span&gt;
+  location @app &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    proxy_set_header X-Forwarded-For &lt;span class=&quot;nv&quot;&gt;$proxy_add_x_forwarded_for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_set_header Host &lt;span class=&quot;nv&quot;&gt;$http_host&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_redirect off&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_read_timeout 600&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_pass http://unicorn-REPO1&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# for things to be downloaded properly&lt;/span&gt;
+  location /files/ &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;alias&lt;/span&gt; /home/rails/REPO1/some-directory/&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    internal&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# upstream for unicorn on repo 2. make sure&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# sockets location is same as in /home/unicorn/unicorn2.conf&lt;/span&gt;
+upstream unicorn-REPO2 &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  server unix:/var/sockets/unicorn.REPO2.sock&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# SSL config for server 2&lt;/span&gt;
+server &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  listen &lt;span class=&quot;m&quot;&gt;443&lt;/span&gt; ssl&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  server_name DOMAIN2.com&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  ssl on&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  ssl_certificate /etc/ssl/REPO2.com.crt&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  ssl_certificate_key /etc/ssl/REPO2.com.key&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# location of repo 1&amp;#39;s public dir&lt;/span&gt;
+  root /home/rails/REPO2/public&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  index index.html index.htm&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  location / &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    try_files &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt;/index.html &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt;.html &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; @app&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  location ~* ^.+&lt;span class=&quot;se&quot;&gt;\.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;jpg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;jpeg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;gif&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;png&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ico&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;zip&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;tgz&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;gz&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;rar&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;bz2&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;doc&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;xls&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;exe&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;pdf&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;ppt&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;txt&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;tar&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mid&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;midi&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;wav&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;bmp&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;rtf&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mp3&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;flv&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;mpeg&lt;span class=&quot;p&quot;&gt;|&lt;/span&gt;avi&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    try_files &lt;span class=&quot;nv&quot;&gt;$uri&lt;/span&gt; @app&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# change the proxy_pass to point to upstream&amp;#39;s name&lt;/span&gt;
+  location @app &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    proxy_set_header X-Forwarded-For &lt;span class=&quot;nv&quot;&gt;$proxy_add_x_forwarded_for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_set_header Host &lt;span class=&quot;nv&quot;&gt;$http_host&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_redirect off&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    proxy_pass http://unicorn-REPO2&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Server blocks are where you put all the good stuff that nginx needs to know with what to do. Since the app we had needed to be automatically changed to https, the listen 80 directive wasn’t that important - just needed to redirect to things properly.&lt;/p&gt;
+
+&lt;p&gt;SSL certs and keys were placed in &lt;code&gt;/etc/ssl/&lt;/code&gt;. If you’ve got intermediate keys, you will want to have them combined into one giant .crt file.&lt;/p&gt;
+
+&lt;p&gt;Check to ensure that your nginx config is syntactically correct. If all good, restart nginx!&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nginx -t
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;service nginx restart&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Correct any mistakes. Make sure each directive ends with a &lt;code&gt;;&lt;/code&gt; !!!&lt;/p&gt;
+
+&lt;p&gt;And voila! You’re good to go. Switch to the rails user to run your standard rake commands like &lt;code&gt;rake db:setup&lt;/code&gt; and &lt;code&gt;assets:precompile&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;final-thoughts&quot;&gt;Final thoughts&lt;/h3&gt;
+&lt;p&gt;I am sure you may have some errors for each ruby. Definitely check your logs for nginx and unicorn. When we did this, we had to re-connect the executable-hook for each of the apps since we used different ruby versions for the apps. Stack Overflow had some brilliant articles that helped us troubleshoot. I can’t recall which ones they were but if I encounter them again, I’ll post it here.&lt;/p&gt;
+
+&lt;p&gt;Also, I’m a huge fan of making my life easier, so I created aliases for root to restart services.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;touch .bash_aliases
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nano .bash_aliases
+
+&lt;span class=&quot;c&quot;&gt;# copy paste this into the file&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;alias &lt;/span&gt;restart-all&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;service nginx restart; service unicorn restart; service unicorn2 restart&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;alias &lt;/span&gt;restart-unicorns&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;service unicorn restart; service unicorn2 restart&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;alias &lt;/span&gt;restart-nginx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;service nginx restart&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;====================================&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;       Restart shortcuts            &amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;====================================&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;restart-all      = restart nginx and both unicorn &amp;amp; unicorn2&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;restart-unicorns = restart both unicorns&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;echo&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;restart-nginx    = restart nginx&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# source your bashrc file to reload shell&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# the echo output should be displayed at the top&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;source&lt;/span&gt; ~/.bashrc&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now you’ll be able to run &lt;code&gt;restart-all&lt;/code&gt; to restart all your services. Woohoo! This is super handy when troubleshooting. And remember, when in doubt, &lt;code&gt;restart-all&lt;/code&gt; sometimes does the trick. :)&lt;/p&gt;
+
+&lt;p&gt;A final word. If you find that your app needs to use Sidekiq or Resque, and you want to use Foreman + Upstart to drive your background workers from your Procfile, I suggest that you do &lt;em&gt;NOT&lt;/em&gt; want to use this 1-click template.&lt;/p&gt;
+
+&lt;p&gt;&lt;i class=&quot;fa fa-angle-double-up&quot;&gt;&lt;/i&gt; Level up +50&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Questions? Comments? I know I can make this cleaner, but there was NO article out there that talked about setting up 2 rails apps using the 1-click Digital Ocean rails template. Seriously. But if you’re stuck and are following these directions, shoot me an email and let me know! I’ll do my best to help if I can.  Hit me up at &lt;a href=&quot;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#116;&amp;#111;:&amp;#114;&amp;#105;&amp;#115;&amp;#097;&amp;#111;&amp;#110;&amp;#114;&amp;#097;&amp;#105;&amp;#108;&amp;#115;&amp;#064;&amp;#103;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#046;&amp;#099;&amp;#111;&amp;#109;&quot;&gt;risaonrails &lt;i class=&quot;fa fa-paper-plane-o&quot;&gt;&lt;/i&gt;&lt;/a&gt;!&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 29 Mar 2015 00:00:00 -0700</pubDate>
+        <link>/risa-on-rails/a-rails-double-app-setup/</link>
+        <guid isPermaLink="true">/risa-on-rails/a-rails-double-app-setup/</guid>
+        
+        <category>rails</category>
+        
+        <category>nginx</category>
+        
+        <category>digital ocean</category>
+        
+        <category>setup</category>
+        
+        <category>unicorn</category>
+        
+        <category>double</category>
+        
+        
+        <category>rails</category>
+        
+        <category>digital</category>
+        
+        <category>ocean</category>
+        
+        <category>nginx</category>
+        
+      </item>
     
       <item>
         <title>Integrating Monit to Slack</title>
