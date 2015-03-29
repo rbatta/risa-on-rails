@@ -112,8 +112,10 @@ There's a few second delay but check out slack! You should see the message with 
 
 This article used an Ubuntu 14.10 droplet.
 
-Level up +3
+{% icon fa-angle-double-up %} Level up +3
 
 ***
 
-Questions? Comments? Please hit me up at risaonrails (at) gmail.com!
+Questions? Comments? Hit me up at [risaonrails {% icon fa-paper-plane-o %}][email]!
+
+[email]: mailto:risaonrails@gmail.com

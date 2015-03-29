@@ -272,6 +272,8 @@ Now, after reading all of this, I hope you feel a bit more comfortable reading t
 
 ***
 
-Questions? Comments? Suggestions? Please let me know. You can email me at risaonrails@gmail.com. No question is too dumb.
+Questions? Comments? Suggestions? Please let me know. You can email me at [risaonrails {% icon fa-paper-plane-o %}][email]. No question is too dumb.
 
-Level up +10
+{% icon fa-angle-double-up %} Level up +10
+
+[email]: mailto:risaonrails@gmail.com

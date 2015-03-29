@@ -30,6 +30,10 @@ Postgres is a bit better in this regard. There's a global setting called `\x aut
 
 Right on! This makes viewing records directly in the database so much easier. 
 
-Got a better way? Let me know via one of them contact method thingers.
+{% icon fa-angle-double-up %} Level up +1
 
-Level up +1
+***
+
+Questions? Comments? Hit me up at [risaonrails {% icon fa-paper-plane-o %}][email]!
+
+[email]: mailto:risaonrails@gmail.com

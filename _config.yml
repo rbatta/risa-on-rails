@@ -1,6 +1,6 @@
 # Site settings
 title: Risa on Rails
-# email: rbatta (at) gmail.com
+email: risaonrails@gmail.com
 description: > # this means to ignore newlines until "baseurl:"
   Risa writes about Rails, Postgres, DevOps, and other things. She loves pairing, internet memes, cats, and all the cute things.
 baseurl: "/risa-on-rails" # the subpath of your site, e.g. /blog/
