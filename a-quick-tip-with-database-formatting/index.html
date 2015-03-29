@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+  <title>A Quick Tip with Database Formatting</title>
+  <meta name="description" content="I’m constantly learning, mostly at this new job. It’s gotten to the point where I end up diving down the rabbit hole many many times. Don’t get me wrong, I l...">
+
+  <link rel="stylesheet" href="/risa-on-rails/css/main.css">
+  <link rel="canonical" href="/risa-on-rails/a-quick-tip-with-database-formatting/">
+  <link rel="alternate" type="application/rss+xml" title="Risa on Rails" href="/risa-on-rails/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/risa-on-rails/">Risa on Rails</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/risa-on-rails/about/">About Risa</a>
+          
+        
+          
+        
+          
+        
+          
+          <a class="page-link" href="/risa-on-rails/level-up/">Level up!</a>
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">A Quick Tip with Database Formatting</h1>
+    <p class="post-meta">Mar 20, 2015</p>
+  </header>
+
+  <article class="post-content">
+    <p>I’m constantly learning, mostly at this new job. It’s gotten to the point where I end up diving down the rabbit hole many many times. Don’t get me wrong, I love every bit of it. Might even say I’m addicted to it. Today’s tip is brought to you by both MySQL &amp;&amp; Postgres! Whoa, a double feature.</p>
+
+<h3 id="the-problem">The problem</h3>
+<p>Know what I really don’t like? Having to check the database and getting results that are displayed all sorts of wonky because your terminal window wraps things when you run <code>select * from that_table where id='1';</code>. It looks something like this in MySQL:</p>
+
+<p><img src="/risa-on-rails/assets/quick-tip-mysql.png" alt="MySQL" /></p>
+
+<p>Oh man. Postgres isn’t that much better, y’know.</p>
+
+<p><img src="/risa-on-rails/assets/quick-tip-postgres.png" alt="Postgres" /></p>
+
+<h3 id="the-solution">The Solution</h3>
+<p>So what do? In MySQL, every SQL command that needs to be formatted pretty needs to have \G appended at the end. <code>select * from that_table where id='1' \G;</code> Annoying to have to append <code>\G</code> to the end, but it’s worth it. Here’s the result:</p>
+
+<p><img src="/risa-on-rails/assets/quick-tip-mysql1.png" alt="MySQL" /></p>
+
+<p>Postgres is a bit better in this regard. There’s a global setting called <code>\x auto</code> which automatically prettifies the information based on terminal width. The only downside is if you’ve got a text column that’s so long it makes the actual header wrap. I’ll take it anyway, because once it’s set, it’s set until you change it.</p>
+
+<p><img src="/risa-on-rails/assets/quick-tip-postgres1.png" alt="Postgres" /></p>
+
+<p>Right on! This makes viewing records directly in the database so much easier.</p>
+
+<p><i class="fa fa-angle-double-up"></i> Level up +1</p>
+
+<hr />
+
+<p>Questions? Comments? Hit me up at <a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#114;&#105;&#115;&#097;&#111;&#110;&#114;&#097;&#105;&#108;&#115;&#064;&#103;&#109;&#097;&#105;&#108;&#046;&#099;&#111;&#109;">risaonrails <i class="fa fa-paper-plane-o"></i></a>!</p>
+
+
+  </article>
+
+</div>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Risa on Rails</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col  footer-col-1">
+        <ul class="contact-list">
+          <li>What's up, buttercup?</li>
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-2">
+        <ul class="social-media-list">
+          
+          <li>
+            <a href="mailto:risaonrails@gmail.com">
+              <span class="icon  icon--email">
+                <i class="fa fa-paper-plane-o"></i>
+              </span>
+
+              <span class="username">risaonrails</span>
+            </a>
+          </li>
+          
+          
+          <li>
+            <a href="https://github.com/rbatta">
+              <span class="icon  icon--github">
+                <i class="fa fa-github-alt"></i>
+              </span>
+
+              <span class="username">rbatta</span>
+            </a>
+          </li>
+          
+          
+          <li>
+            <a href="https://twitter.com/mookiy">
+              <span class="icon  icon--twitter">
+                <i class="fa fa-twitter"></i>
+              </span>
+
+              <span class="username">mookiy</span>
+            </a>
+          </li>
+          
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-3">
+        <p class="text">Risa writes about Rails, Postgres, DevOps, and other things. She loves pairing, internet memes, cats, and all the cute things.
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

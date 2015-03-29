@@ -1,30 +1,497 @@
----
-layout: null
----
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{{ site.title | xml_escape }}</title>
-    <description>{{ site.description | xml_escape }}</description>
-    <link>{{ site.url }}{{ site.baseurl }}/</link>
-    <atom:link href="{{ "/feed.xml" | prepend: site.baseurl | prepend: site.url }}" rel="self" type="application/rss+xml"/>
-    <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
-    <lastBuildDate>{{ site.time | date_to_rfc822 }}</lastBuildDate>
-    <generator>Jekyll v{{ jekyll.version }}</generator>
-    {% for post in site.posts limit:10 %}
+    <title>Risa on Rails</title>
+    <description>Risa writes about Rails, Postgres, DevOps, and other things. She loves pairing, internet memes, cats, and all the cute things.
+</description>
+    <link>/risa-on-rails/</link>
+    <atom:link href="/risa-on-rails/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Sat, 28 Mar 2015 23:44:18 -0700</pubDate>
+    <lastBuildDate>Sat, 28 Mar 2015 23:44:18 -0700</lastBuildDate>
+    <generator>Jekyll v2.5.3</generator>
+    
       <item>
-        <title>{{ post.title | xml_escape }}</title>
-        <description>{{ post.content | xml_escape }}</description>
-        <pubDate>{{ post.date | date_to_rfc822 }}</pubDate>
-        <link>{{ post.url | prepend: site.baseurl | prepend: site.url }}</link>
-        <guid isPermaLink="true">{{ post.url | prepend: site.baseurl | prepend: site.url }}</guid>
-        {% for tag in post.tags %}
-        <category>{{ tag | xml_escape }}</category>
-        {% endfor %}
-        {% for cat in post.categories %}
-        <category>{{ cat | xml_escape }}</category>
-        {% endfor %}
+        <title>Integrating Monit to Slack</title>
+        <description>&lt;p&gt;The conversation of what software are we going to choose for monitoring our apps and servers came up at work. We’ve all used New Relic and Nagios before, but not really Monit. New Relic is free to a certain point, but can get hella expensive if you’ve got multiple apps and want to check many different things. Both Nagios and Monit are open-source, which equates to &lt;em&gt;FREE&lt;/em&gt;. Perfect for dev shops and small businesses.&lt;/p&gt;
+
+&lt;p&gt;Since I like to read a lot of different articles while researching things, I kept coming across Monit as the go-to tool for monitoring instead of Nagios. Plus my boss had some bad experiences with setting it up before. Well, my Google-fu is fairly strong, so I decided to give Monit a try.&lt;/p&gt;
+
+&lt;p&gt;I admit, setup was fairly simple.  Currently our stack is LEPPR (Linux Nginx Passenger Postgres Rails), not that it matters though. So real quick, here were the steps I used to set it up, before going to the meat of the article: integrating with Slack.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo apt-get install monit&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The file you want to edit will be &lt;code&gt;/etc/monit/monitrc&lt;/code&gt; which is the main config file. Comment out the bits about the httpd section, about mid-way thru, and add in your info as needed. As always, geared for Digital Ocean:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;set httpd port 2812 and
+  use address IP_ADDRESS       # Put your droplet IP here
+  allow 0.0.0.0/0.0.0.0        # allow anyone to connect to the server and
+  allow admin:&#39;P@ssw0rd&#39;       # require user and password for login
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;What this does is allow you to hit up your IP address in the browser and see how things are looking: http://IP_ADDRESS:2812.&lt;/p&gt;
+
+&lt;p&gt;Right on.&lt;/p&gt;
+
+&lt;p&gt;Now, let’s integrate!&lt;/p&gt;
+
+&lt;h3 id=&quot;on-slack&quot;&gt;On Slack&lt;/h3&gt;
+&lt;p&gt;If you’re running the desktop app, click on the channel name’s &lt;code&gt;v&lt;/code&gt; down-button and choose Configure Integrations.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;On the web page, choose “&lt;em&gt;Or, make your own!&lt;/em&gt;” which should take you to /services/new#diy.&lt;/li&gt;
+  &lt;li&gt;Click Add for &lt;strong&gt;Incoming Webhooks&lt;/strong&gt;&lt;/li&gt;
+  &lt;li&gt;You can choose a channel or make a new one. I created one called &lt;code&gt;#monitoring&lt;/code&gt; because I’m not original.&lt;/li&gt;
+  &lt;li&gt;Click Add Integration.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;So now you’ve got a webhook URL that looks something like this: https://hooks.slack.com/services/HASH/Hash/LongHash.  You can test out if it works by scrolling to the bottom and picking the integration settings, choosing what you want for description, custom name, etc. Test it out with the &lt;code&gt;curl&lt;/code&gt; command that they give you.  It’s JSON that drives the entire thing.&lt;/p&gt;
+
+&lt;h3 id=&quot;on-monit&quot;&gt;On Monit&lt;/h3&gt;
+&lt;p&gt;Now, back to the box. We’re rubyists here so this is how we roll. We’re going to create a file called &lt;code&gt;slack.rb&lt;/code&gt; in your &lt;code&gt;/etc/monit/&lt;/code&gt; directory.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo touch /etc/monit/slack.rb
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo nano /etc/monit/slack.rb&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Now in this file, insert this:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-ruby&quot; data-lang=&quot;ruby&quot;&gt;&lt;span class=&quot;c1&quot;&gt;#!/usr/bin/ruby&lt;/span&gt;
+
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;net/https&amp;#39;&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;require&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;json&amp;#39;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;uri&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;URI&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;https://hooks.slack.com/services/HASH/Hash/LongHash&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;http&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Net&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;HTTP&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uri&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;uri&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;http&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;use_ssl&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Net&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;HTTP&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Post&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;uri&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request_uri&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;Content-Type&amp;#39;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;application/json&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;body&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;channel&amp;quot;&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;#monitoring&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;# channel name&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;username&amp;quot;&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;Monit Bot&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;# you can name the bot whatever&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;icon_emoji&amp;quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;:trollface:&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;      &lt;span class=&quot;c1&quot;&gt;# because why the hell not!&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&amp;quot;text&amp;quot;&lt;/span&gt;       &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;[&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ENV&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;MONIT_HOST&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;] &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ENV&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;MONIT_SERVICE&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt; - &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ENV&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;MONIT_DESCRIPTION&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_json&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;response&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;http&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;body&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The cool thing about this is that you can pick whatever slack icon you want to use OR you can even upload your own for an emoji and use that. Obviously you’ll have to change the &lt;code&gt;uri&lt;/code&gt;, &lt;code&gt;channel&lt;/code&gt;, &lt;code&gt;username&lt;/code&gt; and the like to what applies to you.&lt;/p&gt;
+
+&lt;p&gt;Do a sanity check at this point to make sure everything’s correct. Run the ruby script real quick-like.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;ruby /etc/monit/slack.rb&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Did you get a notification in Slack?  Great, now make that into an executable file!&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo chmod +x /etc/monit/slack.rb&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;You will need to invoke this file whenever something happens, so to test it out, we’re going to create an nginx file to monitor nginx. This will be kept in &lt;code&gt;/etc/monit/conf.d/&lt;/code&gt; directory as a file called &lt;code&gt;nginx&lt;/code&gt;.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;check process nginx with pidfile /var/run/nginx.pid
+  start &lt;span class=&quot;nv&quot;&gt;program&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/usr/sbin/service nginx start&amp;quot;&lt;/span&gt;
+  stop  &lt;span class=&quot;nv&quot;&gt;program&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;/usr/sbin/service nginx stop&amp;quot;&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; failed host 127.0.0.1 port &lt;span class=&quot;m&quot;&gt;80&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; restart
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; changed pid &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; /etc/monit/slack.rb    &lt;span class=&quot;c&quot;&gt;# this is our sanity check&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; failed host 127.0.0.1 port &lt;span class=&quot;m&quot;&gt;80&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; /etc/monit/slack.rb &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; succeeded &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; /etc/monit/slack.rb
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; cpu is greater than 40% &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;2&lt;/span&gt; cycles &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; /etc/monit/slack.rb &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; succeeded &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;exec&lt;/span&gt; /etc/monit/slack.rb
+  &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; cpu &amp;gt; 60% &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;5&lt;/span&gt; cycles &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt; restart&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The basic format is that whenever you need to invoke an alert, instead of a &lt;code&gt;then alert&lt;/code&gt;, you are changing it to execute the slack.rb file. You &lt;strong&gt;must&lt;/strong&gt; specify the full path to slack.rb. Pretty much any time you see a &lt;code&gt;then alert&lt;/code&gt;, change it to &lt;code&gt;then exec /etc/monit/slack.rb&lt;/code&gt;. :)&lt;/p&gt;
+
+&lt;p&gt;Check to ensure file is correct, reload monit to accept the changes, and then stop/start nginx.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo monit -t       &lt;span class=&quot;c&quot;&gt;# if errors, fix!&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo monit reload
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo service nginx stop
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;sudo service nginx start&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;There’s a few second delay but check out slack! You should see the message with your info all in there. HURRAY!&lt;/p&gt;
+
+&lt;p&gt;This article used an Ubuntu 14.10 droplet.&lt;/p&gt;
+
+&lt;p&gt;&lt;i class=&quot;fa fa-angle-double-up&quot;&gt;&lt;/i&gt; Level up +3&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Questions? Comments? Hit me up at &lt;a href=&quot;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#116;&amp;#111;:&amp;#114;&amp;#105;&amp;#115;&amp;#097;&amp;#111;&amp;#110;&amp;#114;&amp;#097;&amp;#105;&amp;#108;&amp;#115;&amp;#064;&amp;#103;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#046;&amp;#099;&amp;#111;&amp;#109;&quot;&gt;risaonrails &lt;i class=&quot;fa fa-paper-plane-o&quot;&gt;&lt;/i&gt;&lt;/a&gt;!&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 27 Mar 2015 00:00:00 -0700</pubDate>
+        <link>/risa-on-rails/integrate-monit-with-slack/</link>
+        <guid isPermaLink="true">/risa-on-rails/integrate-monit-with-slack/</guid>
+        
+        <category>slack</category>
+        
+        <category>monit</category>
+        
+        <category>devops</category>
+        
+        
+        <category>devops</category>
+        
+        <category>monit</category>
+        
+        <category>slack</category>
+        
       </item>
-    {% endfor %}
+    
+      <item>
+        <title>A Quick Tip with Database Formatting</title>
+        <description>&lt;p&gt;I’m constantly learning, mostly at this new job. It’s gotten to the point where I end up diving down the rabbit hole many many times. Don’t get me wrong, I love every bit of it. Might even say I’m addicted to it. Today’s tip is brought to you by both MySQL &amp;amp;&amp;amp; Postgres! Whoa, a double feature.&lt;/p&gt;
+
+&lt;h3 id=&quot;the-problem&quot;&gt;The problem&lt;/h3&gt;
+&lt;p&gt;Know what I really don’t like? Having to check the database and getting results that are displayed all sorts of wonky because your terminal window wraps things when you run &lt;code&gt;select * from that_table where id=&#39;1&#39;;&lt;/code&gt;. It looks something like this in MySQL:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/risa-on-rails/assets/quick-tip-mysql.png&quot; alt=&quot;MySQL&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Oh man. Postgres isn’t that much better, y’know.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/risa-on-rails/assets/quick-tip-postgres.png&quot; alt=&quot;Postgres&quot; /&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;the-solution&quot;&gt;The Solution&lt;/h3&gt;
+&lt;p&gt;So what do? In MySQL, every SQL command that needs to be formatted pretty needs to have \G appended at the end. &lt;code&gt;select * from that_table where id=&#39;1&#39; \G;&lt;/code&gt; Annoying to have to append &lt;code&gt;\G&lt;/code&gt; to the end, but it’s worth it. Here’s the result:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/risa-on-rails/assets/quick-tip-mysql1.png&quot; alt=&quot;MySQL&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Postgres is a bit better in this regard. There’s a global setting called &lt;code&gt;\x auto&lt;/code&gt; which automatically prettifies the information based on terminal width. The only downside is if you’ve got a text column that’s so long it makes the actual header wrap. I’ll take it anyway, because once it’s set, it’s set until you change it.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/risa-on-rails/assets/quick-tip-postgres1.png&quot; alt=&quot;Postgres&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Right on! This makes viewing records directly in the database so much easier.&lt;/p&gt;
+
+&lt;p&gt;&lt;i class=&quot;fa fa-angle-double-up&quot;&gt;&lt;/i&gt; Level up +1&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Questions? Comments? Hit me up at &lt;a href=&quot;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#116;&amp;#111;:&amp;#114;&amp;#105;&amp;#115;&amp;#097;&amp;#111;&amp;#110;&amp;#114;&amp;#097;&amp;#105;&amp;#108;&amp;#115;&amp;#064;&amp;#103;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#046;&amp;#099;&amp;#111;&amp;#109;&quot;&gt;risaonrails &lt;i class=&quot;fa fa-paper-plane-o&quot;&gt;&lt;/i&gt;&lt;/a&gt;!&lt;/p&gt;
+
+</description>
+        <pubDate>Fri, 20 Mar 2015 00:00:00 -0700</pubDate>
+        <link>/risa-on-rails/a-quick-tip-with-database-formatting/</link>
+        <guid isPermaLink="true">/risa-on-rails/a-quick-tip-with-database-formatting/</guid>
+        
+        <category>postgres</category>
+        
+        <category>mysql</category>
+        
+        <category>tips</category>
+        
+        
+        <category>postgres</category>
+        
+        <category>mysql</category>
+        
+      </item>
+    
+      <item>
+        <title>Postgres Workshop Notes</title>
+        <description>&lt;p&gt;Hi there!&lt;/p&gt;
+
+&lt;p&gt;Missed the Postgres workshop? Forgot what I covered? This post was made just for you then! :)&lt;/p&gt;
+
+&lt;p&gt;Quick background on Postgres. It’s a relational database that is awesome because it’s highly extensible. For instance there is geospacial support (postGIS), key/value store (hstore), and with postgres 9.4, there’s JSON support (more so than what they had previously). You could say it’s the end-all-be-all for databases. At least that’s what I’d like to see it as! Obviously postgres may not suit your needs but this knowledge is valuable and transferable. And if you were afraid of reading the docs before, hopefully after this you won’t be.&lt;/p&gt;
+
+&lt;h3 id=&quot;what-to-expect&quot;&gt;What to expect&lt;/h3&gt;
+&lt;p&gt;I’ll walk thru entering/exiting Postgres. Then a bit of navigation so you feel more comfortable with it. And then we’re going to go straight into dealing with import/export (restore/backup). For the import/export section, I’ve a chump vanilla Rails app that will be used because there’s a rake task in there that creates fake data. Hurray for the Faker gem!&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;first-things-first&quot;&gt;First thing’s first&lt;/h3&gt;
+&lt;p&gt;Let’s make sure you can run Postgres.&lt;/p&gt;
+
+&lt;p&gt;On a Mac, you have a couple of options:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Download the &lt;a href=&quot;http://postgresapp.com/&quot;&gt;postgresapp&lt;/a&gt;. Double-click to open and run it. Boom, postgres is running. You’ll see it as the cute lil elephant icon in your menu bar up top. If you quit the app, you quit the postgres server.&lt;/li&gt;
+  &lt;li&gt;Follow this &lt;a href=&quot;http://www.mikeball.us/blog/setting-up-postgres-with-homebrew/&quot;&gt;super awesome guide&lt;/a&gt;. This is what I used to set my machine up. I prefer this to Postgresapp, truthfully.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;On *nix machines, use &lt;a href=&quot;http://www.postgresql.org/download/linux/&quot;&gt;the official documentation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;On Windows, you can use &lt;a href=&quot;http://www.postgresql.org/download/windows/&quot;&gt;this guide&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Sorry *nix and Windows users. I’m a Mac user so the entire thing is geared for this. Don’t hate!&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;go-in-go-out&quot;&gt;Go in, go out&lt;/h3&gt;
+&lt;p&gt;Once you’ve followed the instructions for installation and have postgres running, we can confirm this by running &lt;code&gt;psql&lt;/code&gt; in Terminal.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Did you get an error saying &lt;code&gt;FATAL role &quot;YOURNAME&quot; does not exist&lt;/code&gt; ? It’s saying that the user account you’re logged in as isn’t a postgres user. We’ve got to create it. Use the command below and make sure to use the name that the role says doesn’t exist. Say yes when they ask if the user (you) should be superuser.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ createuser --interactive YOURNAME
+# Shall the new role be a superuser? (y/n) Y
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Did you get an error saying &lt;code&gt;FATAL database &quot;YOURNAME&quot; does not exist&lt;/code&gt;? Simple enough, we’ll just create it. Use the following command to create that particular database. Make sure you use the name that it references.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ createdb YOURNAME
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Ok, in we go. The postgres prompt you see should have your account name if you followed the above steps. Since my account name is risa, my postgres username and database are risa. The prompt for me looks like &lt;code&gt;risa=#&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql
+risa=#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Great. Let’s quit out of postgres. The command is &lt;code&gt;\q&lt;/code&gt; (not the usual / one. It’s the \ above the return button)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;risa=# \q
+$
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It’s always important to know how to exit any program. Otherwise you might be stuck in &lt;a href=&quot;https://twitter.com/iamdevloper/status/435555976687923200&quot;&gt;vim foreverrrrr&lt;/a&gt;.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;navigation&quot;&gt;Navigation&lt;/h3&gt;
+&lt;p&gt;To find out where we’re at currently, type &lt;code&gt;\conninfo&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql
+risa=# \conninfo
+# You are connected to database &quot;risa&quot; as user &quot;risa&quot; via socket in &quot;/tmp&quot; at port &quot;5432&quot;.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To list the databases you’ve got in postgres, type &lt;code&gt;\l&lt;/code&gt; (l for list)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;risa=# \l
+# you&#39;ll get an output that lists a bunch of databases, including template0 and template1.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;em&gt;Note: template1 is what all new databases use when they get created. If you add an extension like &lt;code&gt;pg_stat_statement&lt;/code&gt; into template1, all your subsequent databases will have that extension turned on automatically. AWESOME.&lt;br /&gt;
+Template0 is the ultimate empty database. If you accidentally mess up template1, then you can use template0 to fix it. 
+I’ll include directions on this maybe at the end or in another blog, but this wasn’t part of the workshop.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;To change databases, you will have to do &lt;code&gt;\c DATABASE_NAME&lt;/code&gt;. Since I don’t know what databases you’ve already got in your system, I’ll use template1 as an example.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;risa=# \c template1
+template1=#
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Notice that the prompt changed. The prompt always points to the current database you’re in. Sweet.&lt;/p&gt;
+
+&lt;p&gt;Let’s hop out and do some Rails things so we can look a bit deeper into postgres.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;rails-setup&quot;&gt;Rails setup&lt;/h3&gt;
+&lt;p&gt;Please clone this repo: &lt;a href=&quot;https://github.com/rbatta/img_blog&quot;&gt;image blog&lt;/a&gt;. It’s my vanilla rails app based on the &lt;a href=&quot;https://www.railstutorial.org/book&quot;&gt;Michael Hartl tutorial&lt;/a&gt;&lt;br /&gt;
+It uses ruby 2.0.0, so you may have to use rvm or rbenv to change ruby versions for this app.&lt;/p&gt;
+
+&lt;p&gt;Once cloned and ruby version is changed to 2.0.0, run the usual suspects:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;bundle install
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;rake db:setup&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With Rails 4.0 and below, &lt;code&gt;rake db:setup&lt;/code&gt; created a dev database with migrations run &lt;strong&gt;as well as an empty test database&lt;/strong&gt;.  In Rails 4.1+, &lt;code&gt;db:setup&lt;/code&gt; no longer creates an empty test database. You have to manually run &lt;code&gt;RAILS_ENV=test rake db:setup&lt;/code&gt;. Silly, I know.&lt;/p&gt;
+
+&lt;p&gt;So, what did that rake db:setup do? Let’s find out.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql
+risa=# \l
+# you should see these 2 added into your database list
+# imgblog_dev       | risa  | UTF8     | en_US.UTF-8 | en_US.UTF-8 |
+# imgblog_test      | risa  | UTF8     | en_US.UTF-8 | en_US.UTF-8 |
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Boom. Now, let’s hop into the imgblog_dev database and check out the tables and stuff. BTW, you can press tab to autocomplete database names (and sometimes table names too). The command for displaying tables is &lt;code&gt;\dt&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;risa=# \c imgblog_dev
+imgblog_dev=# \dt
+# you should see 3 tables. images and users are the tables
+# schema_migrations has the indexes
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you’re curious as to how big your tables might be, you can also do &lt;code&gt;\dt+&lt;/code&gt; which gives you sizes as well.&lt;/p&gt;
+
+&lt;p&gt;To see what’s in the tables, you can then do your standard SQL query:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;imgblog_dev=# select * from users;
+# this will display any/all your users and their columns. 
+# right now it&#39;s empty so you just see column names.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you just want to see the column names of the users table, you can do &lt;code&gt;\d users&lt;/code&gt; instead.&lt;/p&gt;
+
+&lt;p&gt;Great. Let’s hop back out and put some real data in to do some backups and restores. Assuming you’re still in the root directory of the img_blog, run the rake command to create a bunch of fake data.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;imgblog_dev=# \q
+$ rake db:populate
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Hop in and confirm that data was created. I’m going to append the database name to the &lt;code&gt;psql&lt;/code&gt; statement to automatically go to that database.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql imgblog_dev
+imgblog_dev=# SELECT * FROM users;
+# you should see a bunch of output that might be cut off
+# scroll with the arrow keys
+# get the prompt back by pressing Q.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let’s count how many users and images were created. (Answer: 33 users, 66 images)&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;imgblog_dev=# select count(*) from users;
+# you get back 33
+imgblog_dev=# select count(*) from images;
+# you get back 66
+imgblog_dev=# \q
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Awesome. Great job so far!! Time to start the backup / restore process. I’ll go through the commands and append more flags as I go along, explaining each one. By the end, you should have about 4 backup files created.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;backup-and-restore-export-and-import&quot;&gt;Backup and Restore (Export and Import)&lt;/h3&gt;
+
+&lt;h4 id=&quot;backup-first&quot;&gt;Backup first&lt;/h4&gt;
+&lt;p&gt;Backups are created with the &lt;code&gt;pg_dump&lt;/code&gt; command, but in order for it to know what to do, you have to append flags (options) to the command and send the output to a file.  We’re going to be taking backups of &lt;code&gt;imgblog_dev&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_dump -d imgblog_dev &amp;gt; ~/Desktop/dump1.sql
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If I had to read it out loud, it is saying “Take a dump (haha) of database imgblog_dev and send it to the Desktop and call it dump1.sql.” The &lt;code&gt;-d&lt;/code&gt; flag stands for database. The &lt;code&gt;&amp;gt;&lt;/code&gt; is to output the contents to a file in some location. In this case it’s to the Desktop, as dump1.sql. Why &lt;code&gt;.sql&lt;/code&gt; ? Truthfully, the extension doesn’t matter. It can be &lt;code&gt;.txt&lt;/code&gt;, &lt;code&gt;.asdf&lt;/code&gt;, or whatever. But for sanity sake, &lt;code&gt;.sql&lt;/code&gt;. You’ll see why when you open up the file.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ subl ~/Desktop/dump1.sql
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Assuming you’ve got sublime as your text editor with that shortcut, that’ll work. Otherwise do what you normally do when opening up files. :) When you do, you’ll see that it’s got a bunch of SQL commands. If you look more closely, you’ll see that they have some &lt;code&gt;CREATE TABLE&lt;/code&gt; commands and then &lt;code&gt;COPY&lt;/code&gt; commands for the actual data. You’ve taken a human-readable backup of the database.&lt;/p&gt;
+
+&lt;p&gt;What if all we want is the data? Imagine we’re transfering the information to another database and it’s already got tables set up because we’ve run migrations. What then? Let’s set some more flags.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_dump -d imgblog_dev -a -O &amp;gt; ~/Desktop/dump2.sql
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Ok, so we’ve set 2 more flags: &lt;code&gt;-a&lt;/code&gt; and &lt;code&gt;-O&lt;/code&gt; (capital o, not zero). The &lt;code&gt;-a&lt;/code&gt; flag stands for &lt;code&gt;--data-only&lt;/code&gt;, so telling it to take only the data. The &lt;code&gt;-O&lt;/code&gt; command is &lt;code&gt;--no-owner&lt;/code&gt; which means remove all traces of ownership when getting this backup.  If you open up this file and compare it to dump1, here’s the kind of thing you’ll see.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# On ~ line 34 of dump1.sql, you&#39;ll see the owner as yourself
+-- Name: images; Type: TABLE; Schema: public; Owner: risa; Tablespace: 
+
+# On ~ line 15 of dump2.sql, you don&#39;t see an owner listed
+-- Data for Name: images; Type: TABLE DATA; Schema: public; Owner: -
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Quick visual check also comfirms that dump2 only has data listed. No reference to tables.&lt;/p&gt;
+
+&lt;p&gt;Imagine you’re working on a production database, hosted on Digital Ocean at IP address 127.0.0.1 and port 5432. (Reality: 127.0.0.1 == localhost == your computer’s own IP address) This theoretical database is like 2GB large (whoa), and you need to transfer it to your dev env. It’s gonna be a pain to download all 2GB. Let’s compress it down, like an archive file.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_dump -h 127.0.0.1 -p 5432 -d imgblog_dev -a -O -Fc &amp;gt; ~/Desktop/dump3.dump
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The flags to connect: &lt;code&gt;-h&lt;/code&gt; is for host, usually an IP or a .com kind of address; &lt;code&gt;-p&lt;/code&gt; is for port, default postgres port is 5432 but it can be set to anything.  The next new flag is the &lt;code&gt;-Fc&lt;/code&gt; flag. I like to think of it as “format compressed” but in reality it is “format custom.” There are other &lt;code&gt;-F&lt;/code&gt; options, like &lt;code&gt;-Ft&lt;/code&gt; and &lt;code&gt;-Fd&lt;/code&gt; which will also archive your file, but &lt;code&gt;-Fc&lt;/code&gt; is the one you want. Finally, notice that I changed the extension to &lt;code&gt;.dump&lt;/code&gt;. Again, it’s a sanity thing. Appending that lets me know that it’s actually a compressed file that I’m dealing with.&lt;/p&gt;
+
+&lt;p&gt;If you open this file, you’ll immediately notice how it is completely human-readable gibberish and gobbledigook. :) It’s compressed after all. Postgres can understand it; we just know that the file is a lot smaller in size.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_dump -h 127.0.0.1 -p 5432 -U risa -d imgblog_dev -Fc -a -O &amp;gt; ~/Desktop/dump4.dump
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This combines pretty much all the flags I’ve covered thus far with the addition of &lt;code&gt;-U&lt;/code&gt; which is user. In your case, make sure you put your postgres username in, since you won’t have a risa user (unless your name is Risa as well. Hi!)&lt;/p&gt;
+
+&lt;p&gt;Congrats! You’ve gotten this far. One last stretch. Importing/restoring things back in!&lt;/p&gt;
+
+&lt;h4 id=&quot;then-restore&quot;&gt;Then Restore&lt;/h4&gt;
+&lt;p&gt;In the real world, you may have times when databases get completely effed up. Hopefully you’ve got redundant databases or at least a scheduled backup system set up. When this happens, we need to sometimes restore the database to a previously known state. It also means there’s a chance of some loss of data. (Having a failover plan is essential, btw.) Othertimes, maybe you’re pulling in prod data into staging so you can manipulate real data and run some load testing. Whatever the case, you need to import some data from one database to another.&lt;/p&gt;
+
+&lt;p&gt;Let’s get to it. First we’re going to totally break things, because when I gave the workshop, it was live, and I broke things :) We are going to restore to the &lt;code&gt;imgblog_test&lt;/code&gt; database.&lt;/p&gt;
+
+&lt;p&gt;But, one important thing. &lt;strong&gt;One Very Important Thing&lt;/strong&gt; When doing pg_dump, you have the two paths: human-readable and archive/compressed formats. If you choose the human-readable path, you &lt;strong&gt;&lt;em&gt;MUST&lt;/em&gt;&lt;/strong&gt; use &lt;code&gt;psql&lt;/code&gt;. If you choose the archive/compressed format, you &lt;strong&gt;&lt;em&gt;MUST&lt;/em&gt;&lt;/strong&gt; use pg_restore. Got that? In pseudocode it’s:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;use pg_dump
+  if use -Fc
+    use pg_restore
+  else
+    use psql
+  end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now that we got that sorted, let’s use the compressed dump to import/restore.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_restore -d imgblog_test &amp;lt; ~/Desktop/dump3.dump
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you’ve been following very carefully, you will get a bunch of error output. Postgres did NOT like what just happened.  Here’s the proof:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_restore: [archiver (db)] could not execute query: ERROR:  relation &quot;images&quot; does not exist
+Command was: COPY images (id, img_url, img_name, description, user_id, created_at, updated_at, tags, gif, pictures) FROM stdin;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Key in the part where it says: &lt;code&gt;ERROR: relation &quot;images&quot; does not exist&lt;/code&gt;. Why’d it say that?  Remember how I said that in Rails 4.0, &lt;code&gt;rake db:setup&lt;/code&gt; creates an empty test database? Yeah…. Empty database has no tables. The import would not have worked because dump3.dump is a data-only and no-owner dump. It needs tables for data to be inserted.  Instead, let’s run dump1. Remember, since dump1 is a human-readable file, it needs to be run as psql.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql imgblog_test -f ~/Desktop/dump1.sql
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The output should be a list of SET’s and CREATE’s and COPY’s. They will correspond to the SETs and CREATEs and COPYs in your dump1.sql file. Confirm that data has been transferred properly.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ psql imgblog_test
+imgblog_test=# \dt
+# confirm you have images, schema_migrations, and users
+imgblog_test=# select count(*) from users;
+# you should have 33 users.
+imgblog_test=# select count(*) from images;
+# you should have 66 images.
+imgblog_test=# \q
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Fantastic job! Let’s drop the database and confirm that it is no longer there. I am using a shortcut to display the list of databases without hopping into postgres. Then we’ll set it up properly.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ RAILS_ENV=test rake db:drop
+$ psql -l
+# confirm that imgblog_test does not exist
+$ RAILS_ENV=test rake db:setup
+# this runs db:create, migrate, and seed
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Ok, now let’s use that data-only dump file (dump3). The output of that is below the command.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ pg_restore -d imgblog_test &amp;lt; ~/Desktop/dump3.dump
+# the output
+pg_restore: [archiver (db)] Error while PROCESSING TOC:
+pg_restore: [archiver (db)] Error from TOC entry 2284; 0    34203 TABLE DATA schema_migrations risa
+pg_restore: [archiver (db)] COPY failed for table &quot;schema_    migrations&quot;: ERROR:  duplicate key value violates unique    constraint &quot;unique_schema_migrations&quot;
+DETAIL:  Key (version)=(20141122220745) already exists.
+CONTEXT:  COPY schema_migrations, line 1
+WARNING: errors ignored on restore: 1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Oh no! There’s an ERROR!! But wait, it says “duplicate key value violates unique constraint” That’s just postgres double checking your work basically. No need to worry about that. It’s basically saying that it already existed in the database, but that’s to be expected, since we ran the migrations and created the tables (and indexes).  You can confirm that data indeed was still transferred over properly.&lt;br /&gt;
+…I will let you figure that one out on your own. :)&lt;/p&gt;
+
+&lt;p&gt;OK, ONE LAST RESTORE! Imagine that you have to restore the database from your machine to another machine. Yup, you’ll need those host and port (and user, but skipping here) flags.  Before we do that, let’s reset the test database.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ RAILS_ENV=test rake db:reset
+$ pg_restore -h 127.0.0.1 -p 5432 -d imgblog_test &amp;lt; ~/Documents/dump4.dump
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Again, same kind of errors, but hop in and check the data. Did it transfer over?  Awesome!&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h3 id=&quot;wrap-up&quot;&gt;Wrap up&lt;/h3&gt;
+
+&lt;p&gt;Congratulations!! You’ve learned how to navigate about in postgres, use some SQL commands, and import and export data from postgres. You rock! Give yourself a high-5 :D&lt;/p&gt;
+
+&lt;p&gt;Now, after reading all of this, I hope you feel a bit more comfortable reading the documentation. Here are some super helpful links.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.postgresql.org/docs/9.4/static/app-psql.html&quot;&gt;Postgres Docs: psql&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.postgresql.org/docs/9.4/static/app-pgdump.html&quot;&gt;Postgres Docs: pg_dump&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.postgresql.org/docs/9.4/static/app-pgrestore.html&quot;&gt;Postgres Docs: pg_restore&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Questions? Comments? Suggestions? Please let me know. You can email me at &lt;a href=&quot;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#116;&amp;#111;:&amp;#114;&amp;#105;&amp;#115;&amp;#097;&amp;#111;&amp;#110;&amp;#114;&amp;#097;&amp;#105;&amp;#108;&amp;#115;&amp;#064;&amp;#103;&amp;#109;&amp;#097;&amp;#105;&amp;#108;&amp;#046;&amp;#099;&amp;#111;&amp;#109;&quot;&gt;risaonrails &lt;i class=&quot;fa fa-paper-plane-o&quot;&gt;&lt;/i&gt;&lt;/a&gt;. No question is too dumb.&lt;/p&gt;
+
+&lt;p&gt;&lt;i class=&quot;fa fa-angle-double-up&quot;&gt;&lt;/i&gt; Level up +10&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 18 Mar 2015 00:00:00 -0700</pubDate>
+        <link>/risa-on-rails/postgres-workshop-notes/</link>
+        <guid isPermaLink="true">/risa-on-rails/postgres-workshop-notes/</guid>
+        
+        
+        <category>postgres</category>
+        
+      </item>
+    
   </channel>
 </rss>
