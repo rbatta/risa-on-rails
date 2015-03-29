@@ -10,9 +10,9 @@
   <title>A Quick Tip with Database Formatting</title>
   <meta name="description" content="I’m constantly learning, mostly at this new job. It’s gotten to the point where I end up diving down the rabbit hole many many times. Don’t get me wrong, I l...">
 
-  <link rel="stylesheet" href="/risa-on-rails/css/main.css">
-  <link rel="canonical" href="/risa-on-rails/a-quick-tip-with-database-formatting/">
-  <link rel="alternate" type="application/rss+xml" title="Risa on Rails" href="/risa-on-rails/feed.xml" />
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://risaonrails.com/a-quick-tip-with-database-formatting/">
+  <link rel="alternate" type="application/rss+xml" title="" href="http://risaonrails.com/feed.xml" />
 </head>
 
 
@@ -22,7 +22,7 @@
 
   <div class="wrapper">
 
-    <a class="site-title" href="/risa-on-rails/">Risa on Rails</a>
+    <a class="site-name" href="/">Risa on Rails</a>
 
     <nav class="site-nav">
       <a href="#" class="menu-icon">
@@ -36,7 +36,7 @@
       <div class="trigger">
         
           
-          <a class="page-link" href="/risa-on-rails/about/">About Risa</a>
+          <a class="page-link" href="/about/">About Risa</a>
           
         
           
@@ -44,7 +44,7 @@
           
         
           
-          <a class="page-link" href="/risa-on-rails/level-up/">Level up!</a>
+          <a class="page-link" href="/level-up/">Level up!</a>
           
         
           
@@ -72,20 +72,20 @@
 <h3 id="the-problem">The problem</h3>
 <p>Know what I really don’t like? Having to check the database and getting results that are displayed all sorts of wonky because your terminal window wraps things when you run <code>select * from that_table where id='1';</code>. It looks something like this in MySQL:</p>
 
-<p><img src="/risa-on-rails/assets/quick-tip-mysql.png" alt="MySQL" /></p>
+<p><img src="/assets/quick-tip-mysql.png" alt="MySQL" /></p>
 
 <p>Oh man. Postgres isn’t that much better, y’know.</p>
 
-<p><img src="/risa-on-rails/assets/quick-tip-postgres.png" alt="Postgres" /></p>
+<p><img src="/assets/quick-tip-postgres.png" alt="Postgres" /></p>
 
 <h3 id="the-solution">The Solution</h3>
 <p>So what do? In MySQL, every SQL command that needs to be formatted pretty needs to have \G appended at the end. <code>select * from that_table where id='1' \G;</code> Annoying to have to append <code>\G</code> to the end, but it’s worth it. Here’s the result:</p>
 
-<p><img src="/risa-on-rails/assets/quick-tip-mysql1.png" alt="MySQL" /></p>
+<p><img src="/assets/quick-tip-mysql1.png" alt="MySQL" /></p>
 
 <p>Postgres is a bit better in this regard. There’s a global setting called <code>\x auto</code> which automatically prettifies the information based on terminal width. The only downside is if you’ve got a text column that’s so long it makes the actual header wrap. I’ll take it anyway, because once it’s set, it’s set until you change it.</p>
 
-<p><img src="/risa-on-rails/assets/quick-tip-postgres1.png" alt="Postgres" /></p>
+<p><img src="/assets/quick-tip-postgres1.png" alt="Postgres" /></p>
 
 <p>Right on! This makes viewing records directly in the database so much easier.</p>
 
@@ -126,6 +126,17 @@
               </span>
 
               <span class="username">risaonrails</span>
+            </a>
+          </li>
+          
+          
+          <li>
+            <a href="https://linkedin.com/in/risabatta">
+              <span class="icon  icon--linkedin">
+                <i class="fa fa-linkedin"></i>
+              </span>
+
+              <span class="username">risabatta</span>
             </a>
           </li>
           

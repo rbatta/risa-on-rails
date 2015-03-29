@@ -151,13 +151,13 @@ pre {
   min-height: 56px;
   position: relative; }
 
-.site-title {
+.site-name {
   font-size: 26px;
   line-height: 56px;
   letter-spacing: -1px;
   margin-bottom: 0;
   float: left; }
-  .site-title, .site-title:visited {
+  .site-name, .site-name:visited {
     color: #424242; }
 
 .site-nav {
