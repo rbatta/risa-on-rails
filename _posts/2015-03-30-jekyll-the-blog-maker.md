@@ -109,7 +109,9 @@ If you were to do this all by terminal, it'd go something like this:
 $ jekyll build
 $ git add .
 $ git commit -m "yeah your awesome message about your post"
-$ cp _site/* ../your-username.github.io/
+$ cp -r _site/* ../your-username.github.io/
+# on a Mac you'll have to say yes to overwriting everything
+# annoying, I know.
 $ cd ../your-username.github.io
 # confirm that the contents of _site were copied over
 # you may need to rm -rf Rakefile OR add a .gitignore file
