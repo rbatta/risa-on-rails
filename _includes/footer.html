@@ -1,0 +1,70 @@
+<footer class="site-footer">
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">{{ site.name }}</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col  footer-col-1">
+        <ul class="contact-list">
+          <li>What's up, buttercup?</li>
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-2">
+        <ul class="social-media-list">
+          {% if site.email %}
+          <li>
+            <a href="mailto:{{ site.email }}">
+              <span class="icon  icon--email">
+                {% icon fa-paper-plane-o %}
+              </span>
+
+              <span class="username">risaonrails</span>
+            </a>
+          </li>
+          {% endif %}
+          {% if site.linkedin_username %}
+          <li>
+            <a href="https://linkedin.com/in/{{ site.linkedin_username }}">
+              <span class="icon  icon--linkedin">
+                {% icon fa-linkedin %}
+              </span>
+
+              <span class="username">{{ site.linkedin_username }}</span>
+            </a>
+          </li>
+          {% endif %}
+          {% if site.github_username %}
+          <li>
+            <a href="https://github.com/{{ site.github_username }}">
+              <span class="icon  icon--github">
+                {% icon fa-github-alt %}
+              </span>
+
+              <span class="username">{{ site.github_username }}</span>
+            </a>
+          </li>
+          {% endif %}
+          {% if site.twitter_username %}
+          <li>
+            <a href="https://twitter.com/{{ site.twitter_username }}">
+              <span class="icon  icon--twitter">
+                {% icon fa-twitter %}
+              </span>
+
+              <span class="username">{{ site.twitter_username }}</span>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="footer-col  footer-col-3">
+        <p class="text">{{ site.description }}</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
