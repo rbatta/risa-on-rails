@@ -1,7 +1,7 @@
 ---
 title: "Jekyll: The blog maker"
 layout: post
-date: 2015-04-03   
+date: 2015-03-31   
 tags: 
 - jekyll
 - guide
@@ -68,10 +68,7 @@ Fill in the information given. For `baseurl:` keep that as blank quotes so that 
 
 If you change any of the variables, make sure you change them in the css and anywhere else in the other files. For me, I changed the `:title` symbol to `:name` for the name of my blog. Anywhere where `site.title` was referenced, I changed to `site.name`. That includes the css file too. I did this because I added in a `permalink: /:title/` option to give all my pages their own permalinks instead of the weird directory structure Jekyll uses.
 
-Add in `future: false` if you'd like for Github Pages/Jekyll to honor your publish dates set in your posts. (If you put a future date, then the post won't show up until that date.)
-
-{% highlight bash %}permalink: /:title/
-future: false{% endhighlight %}
+{% highlight yaml %}permalink: /:title/{% endhighlight %}
 
 ### > _posts/ and _drafts/
 By default, anything that you put in the _posts directory will be published. Of course you need to make sure it's in the format of `yyyy-mm-dd-post-name` with whatever extension you use. I prefer markdown so all my posts end with `.md`. You're the author of your blogposts so choose whatever format you'd like: Textile or Markdown are the two default choices Jekyll supports. You can choose others with plugins.
