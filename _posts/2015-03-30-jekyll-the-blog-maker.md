@@ -111,7 +111,7 @@ $ git add .
 $ git commit -m "yeah your awesome message about your post"
 $ cp -r _site/* ../your-username.github.io/
 # on a Mac you'll have to say yes to overwriting everything
-# annoying, I know.
+# annoying, I know. you can also sudo to overwrite.
 $ cd ../your-username.github.io
 # confirm that the contents of _site were copied over
 # you may need to rm -rf Rakefile OR add a .gitignore file
@@ -123,6 +123,24 @@ $ git push origin master
 {% endhighlight %}
 
 BOOM. You should be good to go now. Check out your site at http://your-username.github.io :)
+
+### > Laziness
+I like to make my workflow a lot easier by making aliases. The order of some of the commands won't matter. So here's the alias I created, using `sudo cp` to overwrite things properly. It involves putting in my password but that's still less typing overall. Easy peasy. This alias will be put into your `~/.bash_profile` or `~/.zshrc` file.  
+
+{% highlight bash %}
+alias copy-it='jekyll build;sudo cp -r _site/* ../your-username.github.io/;cd ../your-username.github.io;'
+echo '======================='
+echo 'Jekyll cheats'
+echo '======================='
+echo 'make sure you are in correct directory before running this'
+echo 'copy-it = jekyll build then copy contents of _site to your-username master'
+{% endhighlight %}
+
+Obviously change the directory names to fit your thing. Save it and source your file: `source ~/.bash_profile` or `source ~/.zshrc`. You should see the commands displayed in your terminal.  
+
+_Note: If you run `copy-it` you *MUST* be in the correct directory (your-sites-blog-name)!!_
+
+Confirm with a `git diff`. Then commit and push that sucker up! You are on your way to blogging freedom now. (And so am I!)
 
 {% icon fa-angle-double-up %} Level up +5
 
