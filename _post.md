@@ -2,12 +2,16 @@
 title:
 layout: post
 date:   
-tags: [thing, thing, thing]
-categories: thing thing rails devops
+tags:
+- thing
+- thing
+categories:
+- rails
+- devops
 permalink: /:title/
 levelup: 15
 ---
-{% icon fa-angle-double-up %} Level up +{% post.levelup %}
+{% icon fa-angle-double-up %} Level up +
 
 ***
 
