@@ -33,7 +33,7 @@ __TL;DR__ I basically doubled all the unicorn conf files and doubled the server 
 
 Start with your standard Ubuntu setup and click the Rails template. Deploy. The DO template comes with a user already created called Rails. They have a great doc on [how to set your own Rails app with their template](https://www.digitalocean.com/community/tutorials/how-to-use-the-1-click-ruby-on-rails-on-ubuntu-14-04-image), but here's my modifications.  Since our apps are on the LEPUR stack, there's a bit of extra work.
 
-### > Bash setup
+###Bash setup
 First, start by installing git and Postgres. Skip the Postgres install if you're sticking with LEMUR. I dropped the `sudo` part since I'm logged in as `root` user.
 
 {% highlight bash %}
@@ -58,7 +58,7 @@ $ chsh -s /bin/bash rails
 $ mkdir /var/sockets
 {% endhighlight %}
 
-### > Two Rails apps setup
+###Two Rails apps setup
 Now we add our 2 apps. For simplicity sake, I'm adding both of them into the /home/rails/ directory, once I empty it out. If you accidentally deleted the entire rails folder, just `mkdir rails` in `/home`.
 
 {% highlight bash %}
@@ -80,7 +80,7 @@ Ok this part was the easy part. Like setting up 2 dev environments on your own l
 $ chown rails:www-data -R /home/rails
 {% endhighlight %}
 
-### > Unicorn
+###Unicorn
 I struggled and searched the internet far and wide for someone who took the DO 1-click template to create 2 apps. Their template has a non-standard unicorn and nginx configuration (in terms of files and locations). Again, we work with what we got. The easiest way I found was to duplicate the unicorn files, which are located in two different places: `/etc/default/unicorn` and `/home/unicorn/unicorn.conf`. We'll start with the latter. Out of sheer simplicity, the dupes had 2 appended to the end of it. I also use nano as my editor, so don't judge. :)
 
 _Optional step: If you're paranoid like me, you can git init `/home/unicorn/` directory so you can keep track of changes._
@@ -180,7 +180,7 @@ $ service unicorn2 restart
 
 You can confirm that both are running by checking `top -c` then press `shift-M`. Since we named the 2nd unicorn2, your top should have unicorn and unicorn2 running. Score!
 
-### > Nginx
+###Nginx
 Now for the final bit. Nginx's configuration.
 
 If you opt to `git init` your nginx configuration, do it in `/etc/nginx/` directory rather than `/etc/nginx/sites_enabled/` because any extra files in this directory will be read in by nginx.

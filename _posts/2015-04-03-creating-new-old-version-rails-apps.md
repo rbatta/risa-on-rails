@@ -10,7 +10,7 @@ categories:
 - development
 - tip
 permalink: /:title/
-levelup: 1
+summary: "Quick tip on creating a Rails app using an older version of Rails than the one you've got already"
 ---
 
 As always, a work story. Here at Team DevOps, we've been tasked to create a couple of Rails apps using different Ruby versions. After all, why not? We're also Rails developers too, even if we don't look like it. Admittedly, it's been so long since I've started a Rails app from scratch I almost forgot how to do `rails new`... Yeah, only slightly embarrassed.
@@ -19,13 +19,13 @@ I'm more familiar with Ruby 2.0.0 and Rails 4.0.x than 2.2.x and 4.2.x, so I dec
 
 Oh god, that was a terrible, TERRIBLE mistake.
 
-< insert olivander image here >
+![Huge mistake](http://www.nicknotas.com/wp-content/uploads/2013/04/Ive_Made_a_Huge_Mistake.jpg)
 
 What got created was an awesomely standard Rails 4.2.0 app with Ruby 2.2.0. No problem. In my Gemfile I added in `ruby 2.0.0` and bundle updated and thought nothing of it. I moved on and edited my database.yml file and decided to add some of my standard gems I'd be using for TDD: guard and spork. But since it was rails 4.2, I wasn't sure how my guard/spork setup would work, since I was plugging and chugging from an old 4.0.x app I had. Well, whatever.
 
 I'll just change rails 4.2.x to rails 4.0.x! No problemo!! Lemme bundle update and then run `guard init rspec`. 
 
-< insert mushroom cloud >
+![Kaboom!](http://stream1.gifsoup.com/view/897102/mushroom-cloud-o.gif)
 
 What. Have. I. Done. Guard was complaining that I had started things up with a newer version so it wouldn't be able to use the version 4.0.13 wanted (2.6). Not only that but `rails g anything` wasn't working either. Geezus. So I completely uninstalled guard and then installed only the correct version, but even then the Guardfile created seemed weird. Rails didn't let me install rspec either without complaining. Not to mention Rake. Oy vey. How much had changed between Rails 4.0 and 4.2??! What is this business about `activejob_railties`??
 

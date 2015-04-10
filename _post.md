@@ -9,7 +9,7 @@ categories:
 - rails
 - devops
 permalink: /:title/
-levelup: 15
+summary:
 ---
 {% icon fa-angle-double-up %} Level up +
 

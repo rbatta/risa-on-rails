@@ -10,7 +10,9 @@ twitter_username: mookiy
 github_username:  rbatta
 linkedin_username: risabatta
 # Build settings
-markdown: kramdown
+markdown: redcarpet
+redcarpet:
+  extensions: ["strikethrough", "autolink", "with_toc_data"]
 timezone: America/Los_Angeles
 future: true
 # boilerplate stuff
@@ -28,3 +30,4 @@ transfer:
   settings: -av
   source: _site/
   destination: git@github.com:rbatta/risa-on-rails.git
+gems: ["emoji_for_jekyll"]

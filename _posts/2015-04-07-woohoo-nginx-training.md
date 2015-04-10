@@ -1,7 +1,7 @@
 ---
 title: "Woohoo, Nginx training!"
 layout: post
-date: 2015-04-04  
+date: 2015-04-07  
 tags:
 - devops
 - nginx
@@ -11,7 +11,7 @@ categories:
 - rails
 - devops
 permalink: /:title/
-levelup: 1
+summary: "My thoughts on the recent Nginx User Summit and Training conference they had in SF, March 30, 2015."
 ---
 I freaking love San Francisco. Seriously. It's pretty much the center of everything tech related. And if it's not in the city, then it's in Silicon Valley, just a short trip away (depending on what time you leave).
 
@@ -21,12 +21,12 @@ So what's any of this got to do with Nginx? Well the other day I tweeted about s
 
 We spoke to the boss lady who immediately said yes and bought our tickets for us (early bird tix were about $145 incl silly service fees and taxes). We were off to training! Truth is, even if she didn't pay for it, I would have footed the bill because I saw that training to be crucial to my own success. Thankfully our boss is super awesome and encourages learning.
 
-< insert success kid >
+![Success kid](http://swagct.com/generators/images/successkid_thumb.jpg)
 
 ### Training Day
 The Summit/Training was held at RocketSpace in downtown SF. The space was really nice, and we were given a bunch of different swag (tees, water bottles, cute lil cars with M&Ms in them, an O'Reilly book about microservices, etc). The best part was the fact that the tables were lined with paper and had crayons. :D Oh yeah the 12-yr-old me was stoked!
 
-Training started promptly at 9:30 and went over the basics of how to install and configure Nginx. We were all given AWS EC2 or Digital Ocean droplets to work with. My coworker and I lucked out with DO boxes (who needs some long URL to type in for ssh'ing? Just give me a freaking IP!).
+Training started promptly at 9:30 and went over the basics of how to install and configure Nginx. We were all given AWS EC2 or Digital Ocean droplets to work with. My coworker and I lucked out with DO boxes (who needs some long URL to type in for ssh'ing? Just give me a freaking IP!)
 
 The pace was pretty good (admittedly a bit slow for my tastes) and was very comprehensive. It went over what each of the major blocks/contents and common directives were, how to set up SSL, how to set up multiple apps, load balancing, and how to act like a proxy server. All the things I needed to really learn were covered. Between each section was a 5-10min break for people to attempt the 'exercise', which was stepped thru by the instructor prior, so it wasn't anything extremely complicated.
 
@@ -41,7 +41,7 @@ Seriously, this training was kind of amazingly perfect timing for my coworker an
 
 I'm always game on attending training of any sort. Really glad I was able to go to this particular one. I hope to attend more and different training courses.
 
-{% icon fa-angle-double-up %} Level up +1. Attending the training and learning something is +10!
+{% icon fa-angle-double-up %} Level up +1. Attending the training and learning something is +10 life exp!
 
 ***
 
