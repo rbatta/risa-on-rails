@@ -12,6 +12,7 @@ categories:
 - tips
 permalink: /a-quick-tip-with-database-formatting/
 summary: "Simple tip to format how output is displayed in Postgres and MySQL"
+comments: true
 ---
 
 I'm constantly learning, mostly at this new job. It's gotten to the point where I end up diving down the rabbit hole many many times. Don't get me wrong, I love every bit of it. Might even say I'm addicted to it. Today's tip is brought to you by both MySQL && Postgres! Whoa, a double feature.

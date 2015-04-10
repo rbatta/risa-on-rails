@@ -11,6 +11,7 @@ categories:
 levelup: 5
 permalink: /:title/
 summary: "My guide to setting up a Jekyll blog on Github Pages"
+comments: true
 ---
 As you may have figured out, I use Jekyll to create my Github Pages. And boy did I have a hard time understanding what the heck was going on. I dunno, maybe docs and I just don't get along. Most of the how-to guides out there were like "oh yeah rip off this template from this site and start using jekyll!" but that feels like a cop-out to me, and I like to bash my head into the wall. Or keyboard.
 

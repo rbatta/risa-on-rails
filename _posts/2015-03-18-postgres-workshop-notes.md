@@ -10,6 +10,7 @@ tags:
 - postgres
 permalink: /postgres-workshop-notes/
 summary: "I gave a Postgres Workshop for WWC Ruby Tuesdays. Here is the full notes from it."
+comments: true
 ---
 Hi there!
 

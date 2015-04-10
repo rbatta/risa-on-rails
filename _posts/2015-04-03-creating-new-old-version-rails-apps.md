@@ -11,6 +11,7 @@ categories:
 - tip
 permalink: /:title/
 summary: "Quick tip on creating a Rails app using an older version of Rails than the one you've got already"
+comments: true
 ---
 
 As always, a work story. Here at Team DevOps, we've been tasked to create a couple of Rails apps using different Ruby versions. After all, why not? We're also Rails developers too, even if we don't look like it. Admittedly, it's been so long since I've started a Rails app from scratch I almost forgot how to do `rails new`... Yeah, only slightly embarrassed.

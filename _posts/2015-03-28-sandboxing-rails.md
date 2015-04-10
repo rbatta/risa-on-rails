@@ -13,6 +13,7 @@ categories:
 - tips
 permalink: /sandboxing-rails/
 summary: "On using the --sandbox option in Rails"
+comments: true
 ---
 
 Hey, did you know that there's an option called `--sandbox` that you can append to console? 

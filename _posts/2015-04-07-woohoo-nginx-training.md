@@ -12,6 +12,7 @@ categories:
 - devops
 permalink: /:title/
 summary: "My thoughts on the recent Nginx User Summit and Training conference they had in SF, March 30, 2015."
+comments: true
 ---
 I freaking love San Francisco. Seriously. It's pretty much the center of everything tech related. And if it's not in the city, then it's in Silicon Valley, just a short trip away (depending on what time you leave).
 

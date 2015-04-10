@@ -10,6 +10,7 @@ categories:
 - devops
 permalink: /:title/
 summary:
+comments: true
 ---
 {% icon fa-angle-double-up %} Level up +
 
