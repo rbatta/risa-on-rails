@@ -449,8 +449,8 @@ pre {
     color: #099; }
 
 .header-link {
-  position: absolute;
-  left: -0.5em;
+  position: relative;
+  padding-right: 5px;
   opacity: 0;
 
   -webkit-transition: opacity 0.2s ease-in-out 0.1s;
