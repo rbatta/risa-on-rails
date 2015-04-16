@@ -72,12 +72,14 @@ request = Net::HTTP::Post.new(uri.request_uri, {'Content-Type' => 'application/j
 request.body = {
     "channel"    => "#monitoring",  # channel name
     "username"   => "Monit Bot",    # you can name the bot whatever
-    "icon_emoji" => ":trollface:",      # because why the hell not!
+    "icon_emoji" => ":.trollface:",      # because why the hell not!
     "text"       => "[#{ENV['MONIT_HOST']}] #{ENV['MONIT_SERVICE']} - #{ENV['MONIT_DESCRIPTION']}"
 }.to_json
 response = http.request(request)
 puts response.body
 {% endhighlight %}
+
+_Edited note: You'll need to remove the . in trollface for it to work. Refer to how Slack does icons._
 
 The cool thing about this is that you can pick whatever slack icon you want to use OR you can even upload your own for an emoji and use that. Obviously you'll have to change the `uri`, `channel`, `username` and the like to what applies to you.
 
