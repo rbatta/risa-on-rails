@@ -87,7 +87,6 @@ Save and exit. Make it into an executable file.
     sudo chmod +x /etc/monit/touch_surprise_sh
 
 Do your standard monit sanity check, then reload monit.
-
 ```bash
 $ sudo monit -t       # fix any problems, obv
 $ sudo monit reload
